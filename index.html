@@ -599,7 +599,8 @@
       apiKey: "AIzaSyC1ipALSkb85ap070GdZbvTLUjEDbnPEg0",
       authDomain: "relaynovel-53476.firebaseapp.com",
       databaseURL: "https://relaynovel-53476-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "relaynovel-53476"
+      projectId: "relaynovel-53476",
+      storageBucket: "relaynovel-53476.appspot.com"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -645,6 +646,31 @@
       } else {
         el.innerText = emoji || '😀';
       }
+    }
+
+    function resizeImageToDataUrl(file, maxSide = 256, quality = 0.82) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject(new Error('canvas-context-failed'));
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => reject(new Error('image-decode-failed'));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('file-read-failed'));
+        reader.readAsDataURL(file);
+      });
     }
 
     function getNextOnlineTurnIndex(book, startIndex) {
@@ -1716,8 +1742,31 @@
         update(ref(db), updates).catch(()=>{});
 
         showToast('프로필 사진이 저장되었습니다.');
-      } catch (_) {
-        showToast('프로필 사진 업로드에 실패했습니다.', true);
+      } catch (e) {
+        const code = e?.code || 'unknown';
+        const msg = e?.message || '알 수 없는 오류';
+        console.error('avatar upload failed:', code, msg, e);
+
+        try {
+          const uid = window.currentUser.uid;
+          const dataUrl = await resizeImageToDataUrl(file, 256, 0.82);
+          window.currentUser.avatarUrl = dataUrl;
+          updateUserUI();
+
+          const updates = {};
+          updates[`users/${uid}/profile/name`] = window.currentUser.name;
+          updates[`users/${uid}/profile/avatarEmoji`] = window.currentUser.avatarChar || '😀';
+          updates[`users/${uid}/profile/avatarUrl`] = dataUrl;
+          updates[`presence/${uid}/name`] = window.currentUser.name;
+          updates[`presence/${uid}/avatarEmoji`] = window.currentUser.avatarChar || '😀';
+          updates[`presence/${uid}/avatarUrl`] = dataUrl;
+          await update(ref(db), updates);
+
+          showToast('스토리지 업로드 실패로 DB 저장 방식으로 대체했습니다.');
+        } catch (fallbackErr) {
+          console.error('avatar fallback save failed:', fallbackErr);
+          showToast(`업로드 실패: ${code}`, true);
+        }
       } finally {
         input.value = '';
       }
