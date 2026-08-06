@@ -3,6 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Puzzle" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="logo.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="logo.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="logo.png" />
+  <link rel="shortcut icon" href="logo.png" />
+  <script>if(localStorage.getItem('darkMode')==='true')document.documentElement.classList.add('dark');</script>
   <title>Puzzle</title>
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -60,6 +72,21 @@
 
     .toast-anim { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     .page-turn { transition: transform 0.3s ease-out, opacity 0.3s ease-out; }
+
+    /* Cover patterns */
+    .cover-pattern-dots { background-image: radial-gradient(rgba(255,255,255,0.18) 1px, transparent 1px); background-size: 10px 10px; }
+    .cover-pattern-lines { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 9px); }
+    .cover-pattern-cross { background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 10px), repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 10px); }
+    .cover-pattern-diagonal { background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 9px); }
+    .cover-pattern-diagonal-r { background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 9px); }
+    .cover-pattern-lines-v { background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 9px); }
+    .cover-pattern-dots-lg { background-image: radial-gradient(rgba(255,255,255,0.22) 2px, transparent 2px); background-size: 18px 18px; }
+    .cover-pattern-checker { background-image: repeating-conic-gradient(rgba(255,255,255,0.12) 0% 25%, transparent 0% 50%); background-size: 12px 12px; }
+    .cover-pattern-waves { background-image: repeating-radial-gradient(circle at 50% 0%, transparent 8px, rgba(255,255,255,0.08) 8px, rgba(255,255,255,0.08) 10px, transparent 10px); background-size: 18px 10px; }
+
+    /* Reader dialogue formatting */
+    .reader-content p { margin-bottom: 0.7em; line-height: 1.9; font-size: 14.5px; }
+    .reader-content p.dialogue { padding-left: 0.8em; border-left: 2px solid rgba(99,102,241,0.35); }
   </style>
 </head>
 <body class="text-slate-800 dark:text-slate-100 flex justify-center selection:bg-brand-500 selection:text-white">
@@ -138,7 +165,7 @@
 
       <!-- User Header Badge -->
       <div id="user-header-chip" onclick="switchTab('settings')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-200/60 dark:border-slate-700/60 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-        <div id="header-user-avatar" class="w-5 h-5 rounded-full bg-brand-600 text-white font-bold text-[10px] flex items-center justify-center">P</div>
+        <div id="header-user-avatar" class="w-7 h-7 rounded-xl bg-brand-100 dark:bg-brand-900/40 text-xl flex items-center justify-center">P</div>
         <span id="header-user-name" class="text-xs font-bold max-w-[75px] truncate">게스트</span>
       </div>
     </header>
@@ -217,16 +244,34 @@
         <div id="library-books-list" class="space-y-3"></div>
       </section>
 
-      <!-- ================= 4. SETTINGS TAB ================= -->
+      <!-- ================= 4. SOCIAL TAB ================= -->
+      <section id="tab-social" class="tab-content space-y-4 px-4 pt-2">
+        <h2 class="text-lg font-bold">소셜</h2>
+
+        <div id="social-requests-section" class="hidden space-y-2">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> 받은 친구 요청
+          </div>
+          <div id="social-requests-list" class="space-y-2"></div>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="social-pill-all" onclick="switchSocialTab('all')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition-colors">전체</button>
+          <button id="social-pill-friends" onclick="switchSocialTab('friends')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors">친구</button>
+          <button id="social-pill-online" onclick="switchSocialTab('online')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors">온라인</button>
+        </div>
+
+        <div id="social-users-list" class="space-y-2"></div>
+      </section>
+
+      <!-- ================= 5. SETTINGS TAB ================= -->
       <section id="tab-settings" class="tab-content space-y-4 px-4 pt-2">
         <h2 class="text-lg font-bold">설정 및 계정</h2>
 
         <!-- Profile Card -->
         <div class="puzzle-card p-5 space-y-4">
           <div class="flex items-center gap-4">
-            <div class="relative">
-              <input type="text" id="input-avatar-char" maxlength="1" oninput="saveAvatarChar(this.value)" value="P" class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-slate-800 border-2 border-brand-200 dark:border-slate-700 font-black text-2xl text-brand-600 dark:text-brand-400 text-center focus:outline-none cursor-pointer shadow-inner" title="프로필 글자 변경" />
-            </div>
+            <button onclick="openEmojiPicker()" id="avatar-emoji-btn" class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-slate-800 border-2 border-brand-200 dark:border-slate-700 text-3xl flex items-center justify-center hover:bg-brand-100 dark:hover:bg-slate-700 transition-colors shadow-inner" title="이모지 변경">P</button>
 
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
@@ -274,6 +319,10 @@
         <i data-lucide="book-open" class="w-5 h-5 mb-1"></i>
         <span class="text-[10px] font-bold">도서관</span>
       </button>
+      <button onclick="switchTab('social')" class="nav-btn flex-1 flex flex-col items-center justify-center py-2 text-slate-400 hover:text-slate-600 transition-colors" data-tab="social">
+        <i data-lucide="users" class="w-5 h-5 mb-1"></i>
+        <span class="text-[10px] font-bold">소셜</span>
+      </button>
       <button onclick="switchTab('settings')" class="nav-btn flex-1 flex flex-col items-center justify-center py-2 text-slate-400 hover:text-slate-600 transition-colors" data-tab="settings">
         <i data-lucide="settings" class="w-5 h-5 mb-1"></i>
         <span class="text-[10px] font-bold">설정</span>
@@ -293,45 +342,65 @@
 
         <div class="space-y-4 text-sm">
           <!-- Cover Customizer & Live Preview Area -->
-          <div class="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="font-bold text-xs text-slate-700 dark:text-slate-300">🎨 표지 스타일 커스텀</label>
-              <button type="button" onclick="randomizeCover()" class="text-[11px] font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
-                <i data-lucide="shuffle" class="w-3 h-3"></i> 랜덤 색상
+          <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden">
+            <div class="px-4 py-2.5 bg-slate-100/80 dark:bg-slate-800 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5"><i data-lucide="palette" class="w-3.5 h-3.5"></i> 표지 디자인</span>
+              <button type="button" onclick="randomizeCover()" class="flex items-center gap-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 bg-white dark:bg-slate-700 px-2.5 py-1 rounded-lg hover:bg-brand-50 dark:hover:bg-slate-600 transition-colors">
+                <i data-lucide="shuffle" class="w-3 h-3"></i> 랜덤
               </button>
             </div>
 
-            <!-- Cover Preview Container -->
-            <div class="flex justify-center py-1">
-              <div id="cover-preview-card" class="w-28 h-36 rounded-2xl shadow-md p-3 flex flex-col justify-between relative overflow-hidden transition-all duration-200" style="background-color: #6366f1;">
-                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/20 text-white w-fit backdrop-blur-xs">미리보기</span>
-                <div class="relative z-10 text-white">
-                  <h4 id="cover-preview-title" class="font-bold text-xs leading-snug line-clamp-2">제목을 입력하세요</h4>
-                  <p id="cover-preview-sub" class="text-[9px] text-white/80 truncate mt-0.5 font-medium">소제목</p>
+            <div class="p-4 bg-white dark:bg-slate-900/40 space-y-4">
+              <!-- Preview -->
+              <div class="flex justify-center">
+                <div id="cover-preview-card" class="w-24 h-32 rounded-xl shadow-lg p-2.5 flex flex-col justify-end relative overflow-hidden transition-all duration-300" style="background-color:#6366f1">
+                  <div id="cover-preview-pattern" class="absolute inset-0 pointer-events-none"></div>
+                  <div class="relative z-10">
+                    <h4 id="cover-preview-title" class="font-bold leading-tight" style="color:#fff;font-size:10px;word-break:break-word">제목 입력</h4>
+                    <p id="cover-preview-sub" class="mt-0.5 font-medium" style="color:#fff;opacity:0.8;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></p>
+                  </div>
+                  <div id="cover-preview-stamp" class="absolute -right-2 -bottom-2 text-5xl opacity-15 pointer-events-none">🧩</div>
                 </div>
-                <div id="cover-preview-stamp" class="absolute -right-2 -bottom-2 text-5xl opacity-20 pointer-events-none">🧩</div>
               </div>
-            </div>
 
-            <!-- Color Palette Presets -->
-            <div>
-              <span class="block text-[11px] font-medium text-slate-500 mb-1.5">바탕 색상</span>
-              <div class="flex flex-wrap gap-2" id="cover-color-palette">
-                <!-- Preset color buttons generated in JS -->
+              <div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+
+              <!-- Color Palette -->
+              <div>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">배경색</span>
+                <div class="grid grid-cols-8 gap-1.5" id="cover-color-palette"></div>
               </div>
-            </div>
 
-            <!-- Shape / Icon Selector -->
-            <div>
-              <span class="block text-[11px] font-medium text-slate-500 mb-1.5">표지 도형/스탬프</span>
-              <div class="flex gap-2 overflow-x-auto pb-1" id="cover-shape-picker">
-                <!-- Shape preset buttons in JS -->
+              <div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+
+              <!-- Pattern -->
+              <div>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">패턴</span>
+                <div class="flex gap-1.5 flex-wrap" id="cover-pattern-picker"></div>
               </div>
-            </div>
 
-            <!-- Subtitle / Tagline Input -->
-            <div>
-              <input type="text" id="create-subtitle" oninput="updateCoverPreview()" placeholder="표지 소제목/문구 (선택)" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:border-brand-500" />
+              <div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+
+              <!-- Stamps -->
+              <div>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">스탬프</span>
+                <div class="grid grid-cols-8 gap-1" id="cover-shape-picker"></div>
+                <button type="button" onclick="toggleMoreStamps()" id="btn-more-stamps" class="mt-2 flex items-center gap-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">
+                  <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i><span>더보기</span>
+                </button>
+              </div>
+
+              <!-- Text Color + Subtitle -->
+              <div class="flex items-end gap-3">
+                <div class="shrink-0">
+                  <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">글자색</span>
+                  <div class="flex gap-1.5" id="cover-text-color-picker"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-2">소제목</span>
+                  <input type="text" id="create-subtitle" oninput="updateCoverPreview()" placeholder="부제목/문구" class="w-full px-2.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -470,21 +539,41 @@
       <div class="h-14 shrink-0 px-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 shadow-xs">
         <button onclick="closeModal('modal-reader')" class="p-2.5 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-colors"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
         <span class="text-sm font-bold text-slate-800 dark:text-slate-100">출판작 감상</span>
-        <button id="btn-propose-delete" onclick="proposeDeleteBook()" class="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 font-bold text-[11px] hover:bg-rose-100 transition-colors hidden">삭제 제안</button>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-like-book" onclick="toggleLikeBook()" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-400 hover:bg-rose-100 transition-colors">
+            <i data-lucide="heart" class="w-3.5 h-3.5"></i><span id="like-count-display">0</span>
+          </button>
+          <button id="btn-propose-delete" onclick="proposeDeleteBook()" class="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 font-bold text-[11px] hover:bg-rose-100 transition-colors hidden">삭제 제안</button>
+        </div>
       </div>
 
-      <div id="reader-swipe-area" class="flex-1 p-6 overflow-hidden flex flex-col justify-between">
-        <div class="text-center mb-6">
+      <div id="reader-swipe-area" class="flex-1 px-6 pt-5 pb-3 flex flex-col overflow-hidden">
+        <div class="text-center mb-4 shrink-0">
           <h2 id="reader-book-title" class="text-xl font-bold text-slate-900 dark:text-white">제목</h2>
           <p id="reader-book-authors" class="text-[11px] text-slate-400 mt-1.5 uppercase tracking-wide">작가진</p>
         </div>
-        <div id="reader-page-box" class="flex-1 text-sm leading-loose font-serif overflow-y-auto text-slate-700 dark:text-slate-300"></div>
+
+        <!-- Page area -->
+        <div class="flex-1 relative overflow-hidden" id="reader-page-area">
+          <div id="reader-page-box" class="absolute inset-0 overflow-y-auto pr-1 bg-white dark:bg-slate-900" style="z-index:1"></div>
+        </div>
         
-        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-slate-400">
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-slate-400 shrink-0 mt-3">
           <button onclick="prevBookPage()" id="btn-prev-page" class="p-2 hover:text-slate-800 dark:hover:text-white transition-colors"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
           <span id="reader-page-indicator" class="font-mono text-xs font-medium">1 / 1</span>
           <button onclick="nextBookPage()" id="btn-next-page" class="p-2 hover:text-slate-800 dark:hover:text-white transition-colors"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
         </div>
+      </div>
+    </div>
+
+    <!-- 4. Emoji Picker Modal -->
+    <div id="modal-emoji-picker" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] hidden flex flex-col justify-end" onclick="if(event.target===this)closeModal('modal-emoji-picker')">
+      <div class="bg-white dark:bg-slate-900 w-full rounded-t-3xl p-5 space-y-4 max-h-[60vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm">프로필 이모지</h3>
+          <button onclick="closeModal('modal-emoji-picker')" class="p-1.5 text-slate-400 hover:text-slate-600 bg-slate-100 dark:bg-slate-800 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="grid grid-cols-8 gap-2" id="emoji-picker-grid"></div>
       </div>
     </div>
   </div>
@@ -493,8 +582,8 @@
   <!-- ================= JAVASCRIPT ================= -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, setPersistence, browserLocalPersistence, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC1ipALSkb85ap070GdZbvTLUjEDbnPEg0",
@@ -505,6 +594,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence).catch(()=>{});
     const db = getDatabase(app);
 
     window.currentUser = { uid: null, name: '게스트', avatarChar: 'P', isAnon: true };
@@ -519,20 +609,43 @@
     window.readerCurrentBook = null;
     window.readerBookPages = [];
     window.readerCurrentPageIndex = 0;
+    window.socialData = { presence: {}, friends: {}, requests: {}, sent: new Set() };
+    window.currentSocialFilter = 'all';
     let swipeStartX = 0;
 
     // Cover customizer state
-    const coverColors = ['#6366f1', '#0f172a', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#3b82f6', '#14b8a6', '#f43f5e'];
+    const coverColors = [
+      '#c0392b','#e74c3c','#e91e63','#ff4081','#ad1457','#880e4f','#d63031','#c71585',
+      '#e67e22','#f39c12','#f1c40f','#2ecc71','#27ae60','#1abc9c','#16a085','#e17055',
+      '#2980b9','#3498db','#1e90ff','#0984e3','#00b894','#00cec9','#74b9ff','#a29bfe',
+      '#8e44ad','#9b59b6','#6c5ce7','#5352ed','#4834d4','#3d5a80','#2d3561','#6a1b9a',
+      '#2c3e50','#34495e','#1a1a2e','#16213e','#0f3460','#2d3436','#1b1464','#000000',
+    ];
     const coverShapes = [
-      { id: 'puzzle', emoji: '🧩' },
-      { id: 'heart', emoji: '❤️' },
-      { id: 'star', emoji: '⭐️' },
-      { id: 'book', emoji: '📖' },
-      { id: 'sparkles', emoji: '✨' },
-      { id: 'moon', emoji: '🌙' }
+      '🧩','❤️','⭐','📖','✨','🌙','☀️','👑',
+      '🔥','🌸','🪄','⚔️','👻','🐉','🦸','🎭',
+      '💎','🌈','🌊','⚡','💫','🔮','🛡️','🌺',
+      '🌷','🌻','🌹','🍀','🌿','🌲','🦅','🦁',
+      '🐯','🦊','🎵','🎸','🏆','🥇','🚀','🌍',
+      '📜','🗺️','🔐','💀','🎃','👾','🔱','⚜️',
+    ];
+    const coverPatterns = [
+      { id: 'none', label: '없음' }, { id: 'dots', label: '점' },
+      { id: 'dots-lg', label: '큰점' }, { id: 'lines', label: '가로' },
+      { id: 'lines-v', label: '세로' }, { id: 'cross', label: '격자' },
+      { id: 'diagonal', label: '사선' }, { id: 'diagonal-r', label: '역사선' },
+      { id: 'checker', label: '체크' }, { id: 'waves', label: '파도' },
+    ];
+    const coverTextColors = [
+      { value: '#ffffff', label: '흰색' }, { value: '#f8fafc', label: '연백' },
+      { value: '#fef3c7', label: '크림' }, { value: '#dbeafe', label: '하늘' },
+      { value: '#000000', label: '검정' }, { value: '#1e293b', label: '남색' },
     ];
     window.selectedCoverColor = coverColors[0];
-    window.selectedCoverShape = coverShapes[0].emoji;
+    window.selectedCoverShape = coverShapes[0];
+    window.selectedCoverPattern = 'none';
+    window.selectedCoverTextColor = '#ffffff';
+    window.showAllStamps = false;
 
     const gradients = [
       'from-indigo-400 to-purple-500', 'from-emerald-400 to-teal-500',
@@ -549,20 +662,51 @@
 
     // Cover Customizer Helpers
     function renderCoverCustomizerControls() {
-      const colorContainer = document.getElementById('cover-color-palette');
-      if (colorContainer) {
-        colorContainer.innerHTML = coverColors.map(c => `
-          <button type="button" onclick="selectCoverColor('${c}')" class="w-6 h-6 rounded-full transition-transform active:scale-95 ${window.selectedCoverColor === c ? 'ring-2 ring-offset-2 ring-slate-900 dark:ring-white scale-110' : ''}" style="background-color: ${c}"></button>
+      const colorCont = document.getElementById('cover-color-palette');
+      if (colorCont) colorCont.innerHTML = coverColors.map(c => `
+        <button type="button" onclick="selectCoverColor('${c}')"
+          class="w-8 h-8 rounded-lg transition-all ${window.selectedCoverColor === c ? 'ring-2 ring-offset-1 ring-slate-800 dark:ring-white scale-110 shadow-md' : 'hover:scale-105 hover:shadow-sm'}"
+          style="background-color:${c}"></button>
+      `).join('');
+
+      const shapes = window.showAllStamps ? coverShapes : coverShapes.slice(0, 16);
+      const shapeCont = document.getElementById('cover-shape-picker');
+      if (shapeCont) {
+        shapeCont.innerHTML = shapes.map(e => `
+          <button type="button" onclick="selectCoverShape('${e}')"
+            class="w-9 h-9 rounded-xl text-xl flex items-center justify-center transition-all ${window.selectedCoverShape === e ? 'bg-brand-100 dark:bg-brand-900/50 ring-2 ring-brand-400 scale-110' : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'}">
+            ${e}
+          </button>
         `).join('');
+        const moreBtn = document.getElementById('btn-more-stamps');
+        if (moreBtn) {
+          const sp = moreBtn.querySelector('span');
+          if (sp) sp.innerText = window.showAllStamps ? '접기' : '더보기';
+          const ic = moreBtn.querySelector('i');
+          if (ic) { ic.setAttribute('data-lucide', window.showAllStamps ? 'chevron-up' : 'chevron-down'); lucide.createIcons(); }
+        }
       }
 
-      const shapeContainer = document.getElementById('cover-shape-picker');
-      if (shapeContainer) {
-        shapeContainer.innerHTML = coverShapes.map(s => `
-          <button type="button" onclick="selectCoverShape('${s.emoji}')" class="px-2.5 py-1 rounded-lg text-sm border transition-colors ${window.selectedCoverShape === s.emoji ? 'bg-brand-600 text-white border-brand-600 font-bold' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">${s.emoji}</button>
-        `).join('');
-      }
+      const patCont = document.getElementById('cover-pattern-picker');
+      if (patCont) patCont.innerHTML = coverPatterns.map(p => `
+        <button type="button" onclick="selectCoverPattern('${p.id}')"
+          class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-colors ${window.selectedCoverPattern === p.id ? 'bg-brand-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-brand-400'}">
+          ${p.label}
+        </button>
+      `).join('');
+
+      const tcCont = document.getElementById('cover-text-color-picker');
+      if (tcCont) tcCont.innerHTML = coverTextColors.map(tc => `
+        <button type="button" onclick="selectCoverTextColor('${tc.value}')"
+          class="w-7 h-7 rounded-full border-2 transition-all ${window.selectedCoverTextColor === tc.value ? 'border-brand-600 scale-125 shadow-sm' : 'border-slate-300 hover:scale-110'}"
+          style="background-color:${tc.value}" title="${tc.label}"></button>
+      `).join('');
     }
+
+    window.toggleMoreStamps = function() {
+      window.showAllStamps = !window.showAllStamps;
+      renderCoverCustomizerControls();
+    };
 
     window.selectCoverColor = function(color) {
       window.selectedCoverColor = color;
@@ -576,11 +720,22 @@
       updateCoverPreview();
     };
 
+    window.selectCoverPattern = function(patternId) {
+      window.selectedCoverPattern = patternId;
+      renderCoverCustomizerControls();
+      updateCoverPreview();
+    };
+
+    window.selectCoverTextColor = function(color) {
+      window.selectedCoverTextColor = color;
+      renderCoverCustomizerControls();
+      updateCoverPreview();
+    };
+
     window.randomizeCover = function() {
-      const randomColor = coverColors[Math.floor(Math.random() * coverColors.length)];
-      const randomShape = coverShapes[Math.floor(Math.random() * coverShapes.length)].emoji;
-      window.selectedCoverColor = randomColor;
-      window.selectedCoverShape = randomShape;
+      window.selectedCoverColor = coverColors[Math.floor(Math.random() * coverColors.length)];
+      window.selectedCoverShape = coverShapes[Math.floor(Math.random() * coverShapes.length)];
+      window.selectedCoverPattern = coverPatterns[Math.floor(Math.random() * coverPatterns.length)].id;
       renderCoverCustomizerControls();
       updateCoverPreview();
     };
@@ -590,41 +745,51 @@
       const titleElem = document.getElementById('cover-preview-title');
       const subElem = document.getElementById('cover-preview-sub');
       const stampElem = document.getElementById('cover-preview-stamp');
+      const patternOverlay = document.getElementById('cover-preview-pattern');
 
       if (!card) return;
 
+      card.style.background = '';
       card.style.backgroundColor = window.selectedCoverColor;
+
+      if (patternOverlay) {
+        patternOverlay.className = `absolute inset-0 pointer-events-none${window.selectedCoverPattern !== 'none' ? ' cover-pattern-' + window.selectedCoverPattern : ''}`;
+      }
+
+      const tc = window.selectedCoverTextColor;
+      titleElem.style.color = tc;
+      subElem.style.color = tc;
+
       const titleVal = document.getElementById('create-title')?.value.trim();
       const subVal = document.getElementById('create-subtitle')?.value.trim();
-
       titleElem.innerText = titleVal || '제목을 입력하세요';
       subElem.innerText = subVal || '';
       stampElem.innerText = window.selectedCoverShape;
     };
 
-    // Helper to render book cover element across the app
     function renderBookCoverElement(book, heightClass = 'h-40', widthClass = 'w-[130px]') {
-      if (book.cover && book.cover.bgColor) {
+      if (book.cover) {
+        const c = book.cover;
+        const bgStyle = c.bgType === 'gradient'
+          ? `background:${c.bgValue};`
+          : `background-color:${c.bgValue || c.bgColor || '#6366f1'};`;
+        const tc = c.textColor || '#ffffff';
+        const patClass = c.pattern && c.pattern !== 'none' ? ` cover-pattern-${c.pattern}` : '';
         return `
-          <div class="${widthClass} ${heightClass} rounded-2xl p-3 flex flex-col justify-between relative overflow-hidden shadow-md shrink-0 transition-transform active:scale-95" style="background-color: ${book.cover.bgColor};">
-            <span class="relative z-10 bg-white/20 backdrop-blur-md text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md w-fit">
-              ${book.status === 'WRITING' ? '진행중' : (book.status === 'LOBBY' ? '대기중' : '출판작')}
-            </span>
+          <div class="${widthClass} ${heightClass} rounded-2xl p-2.5 flex flex-col justify-end relative overflow-hidden shadow-md shrink-0 transition-transform active:scale-95" style="${bgStyle}">
+            ${patClass ? `<div class="absolute inset-0 pointer-events-none${patClass}"></div>` : ''}
             <div class="relative z-10">
-              <h4 class="text-white font-bold text-xs leading-snug line-clamp-2">${escapeHtml(book.title)}</h4>
-              ${book.cover.subtitle ? `<p class="text-white/80 text-[9px] font-medium truncate mt-0.5">${escapeHtml(book.cover.subtitle)}</p>` : ''}
+              <h4 class="font-bold leading-tight" style="color:${tc};font-size:10px;word-break:break-word">${escapeHtml(book.title)}</h4>
+              ${c.subtitle ? `<p class="font-medium mt-0.5" style="color:${tc};opacity:0.75;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.subtitle)}</p>` : ''}
             </div>
-            <div class="absolute -right-2 -bottom-2 text-5xl opacity-20 pointer-events-none">${book.cover.shapeEmoji || '🧩'}</div>
+            <div class="absolute -right-2 -bottom-2 text-5xl opacity-15 pointer-events-none">${c.shapeEmoji || '🧩'}</div>
           </div>
         `;
       } else {
         return `
-          <div class="${widthClass} ${heightClass} rounded-2xl bg-gradient-to-br ${getBookGradient(book.id)} shadow-md p-3 flex flex-col justify-between relative overflow-hidden shrink-0 transition-transform active:scale-95">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <span class="relative z-10 bg-white/20 backdrop-blur-md text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md w-fit">
-              ${book.status === 'WRITING' ? '진행중' : (book.status === 'LOBBY' ? '대기중' : '출판작')}
-            </span>
-            <h4 class="relative z-10 text-white font-bold text-xs leading-snug line-clamp-3">${escapeHtml(book.title)}</h4>
+          <div class="${widthClass} ${heightClass} rounded-2xl bg-gradient-to-br ${getBookGradient(book.id)} shadow-md p-2.5 flex flex-col justify-end relative overflow-hidden shrink-0 transition-transform active:scale-95">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
+            <h4 class="relative z-10 text-white font-bold leading-tight" style="font-size:10px;word-break:break-word">${escapeHtml(book.title)}</h4>
           </div>
         `;
       }
@@ -675,6 +840,8 @@
           }
           updateUserUI();
           renderAllViews();
+          initPresence();
+          listenToSocial();
         } else {
           document.getElementById('view-auth').classList.remove('hidden');
           document.getElementById('view-auth').classList.add('flex');
@@ -728,7 +895,7 @@
 
     function updateUserUI() {
       const name = window.currentUser.name;
-      const avatar = window.currentUser.avatarChar || name.charAt(0) || 'P';
+      const avatar = window.currentUser.avatarChar || name.charAt(0) || '😀';
       
       document.getElementById('header-user-name').innerText = name;
       document.getElementById('header-user-avatar').innerText = avatar;
@@ -736,7 +903,8 @@
       
       document.getElementById('display-nickname').innerText = name;
       document.getElementById('input-nickname').value = name;
-      document.getElementById('input-avatar-char').value = avatar;
+      const emojiBtn = document.getElementById('avatar-emoji-btn');
+      if (emojiBtn) emojiBtn.innerText = avatar;
       
       const statusBadge = document.getElementById('account-status-badge');
       const emailText = document.getElementById('profile-email-text');
@@ -774,6 +942,10 @@
       if (window.activeStudioBookId && window.allBooks[window.activeStudioBookId]) {
         renderStudioContent(window.allBooks[window.activeStudioBookId]);
       }
+      if (window.readerCurrentBook) {
+        const fresh = window.allBooks[window.readerCurrentBook.id];
+        if (fresh) { window.readerCurrentBook = fresh; updateLikeButton(fresh); }
+      }
     }
 
     function hasBookAccessPermission(book) {
@@ -810,7 +982,7 @@
       // Home Library Books (Vertical List)
       document.getElementById('home-library-highlights').innerHTML = pubBooks.length ? pubBooks.slice(0,4).map(b => `
         <div class="flex gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/80 cursor-pointer active:scale-[0.99] transition-transform" onclick="openReaderModal('${b.id}')">
-          ${renderBookCoverElement(b, 'h-20', 'w-16')}
+          ${renderBookCoverElement(b, 'h-24', 'w-20')}
           <div class="flex-1 flex flex-col justify-center min-w-0">
             <h4 class="font-bold text-sm mb-1 text-slate-900 dark:text-white truncate pr-1">${escapeHtml(b.title)}</h4>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-1.5 leading-relaxed pr-1">${escapeHtml(b.fullText)}</p>
@@ -908,24 +1080,49 @@
       openStudioModal(bookId);
     }
 
-    // LIBRARY
     window.renderLibrary = function() {
       const search = (document.getElementById('library-search-input')?.value || '').toLowerCase();
       const published = Object.values(window.allBooks).filter(b => b.status === 'PUBLISHED' && b.title.toLowerCase().includes(search));
 
-      document.getElementById('library-books-list').innerHTML = published.length ? published.map(b => `
-        <div onclick="openReaderModal('${b.id}')" class="flex gap-3 bg-white dark:bg-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/80 cursor-pointer active:scale-[0.99] transition-transform">
-          ${renderBookCoverElement(b, 'h-20', 'w-16')}
-          <div class="flex-1 flex flex-col justify-center min-w-0">
-            <h4 class="font-bold text-sm mb-1 text-slate-900 dark:text-white truncate pr-1">${escapeHtml(b.title)}</h4>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-1.5 leading-relaxed pr-1">${escapeHtml(b.fullText)}</p>
-            <div class="flex justify-between items-center text-[10px] font-bold text-slate-400 mt-auto">
-              <span class="truncate pr-2">${b.authors ? b.authors.length + '명 참여' : '공동 작가'}</span>
-              <span class="text-rose-500 flex items-center gap-0.5 shrink-0"><i data-lucide="heart" class="w-3 h-3 fill-current"></i> ${b.likes || 0}</span>
+      if (!published.length) {
+        document.getElementById('library-books-list').innerHTML = `<div class="puzzle-card p-8 text-center text-xs font-medium text-slate-400">출판된 도서가 없습니다.</div>`;
+        return;
+      }
+
+      document.getElementById('library-books-list').innerHTML = published.map(b => {
+        const c = b.cover;
+        const bgStyle = c
+          ? (c.bgType === 'gradient' ? `background:${c.bgValue}` : `background-color:${c.bgValue || c.bgColor || '#6366f1'}`)
+          : 'background:linear-gradient(135deg,#667eea,#764ba2)';
+        const tc = (c && c.textColor) || '#ffffff';
+        const patClass = c && c.pattern && c.pattern !== 'none' ? ` cover-pattern-${c.pattern}` : '';
+        const stamp = (c && c.shapeEmoji) || '🧩';
+        return `
+          <div onclick="openReaderModal('${b.id}')" class="flex gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/80 cursor-pointer active:scale-[0.99] transition-transform items-start">
+            <div class="shrink-0" style="perspective:500px">
+              <div style="width:88px;height:118px;transform:rotateY(-20deg);transform-style:preserve-3d;border-radius:3px 9px 9px 3px;box-shadow:5px 7px 20px rgba(0,0,0,0.28);overflow:hidden;position:relative;${bgStyle}">
+                ${patClass ? `<div class="absolute inset-0 pointer-events-none${patClass}"></div>` : ''}
+                <div style="position:absolute;top:0;bottom:0;left:0;width:10px;background:linear-gradient(to right,rgba(0,0,0,0.28),transparent)"></div>
+                <div style="position:absolute;bottom:0;left:0;right:0;padding:6px">
+                  <p style="color:${tc};font-size:9px;font-weight:700;line-height:1.3;word-break:break-word">${escapeHtml(b.title)}</p>
+                </div>
+                <div style="position:absolute;right:-6px;bottom:-6px;font-size:38px;opacity:0.12;pointer-events:none">${stamp}</div>
+              </div>
             </div>
-          </div>
-        </div>
-      `).join('') : `<div class="puzzle-card p-8 text-center text-xs font-medium text-slate-400">출판된 도서가 없습니다.</div>`;
+            <div class="flex-1 min-w-0 pt-0.5">
+              <h3 class="font-bold text-[15px] text-slate-900 dark:text-white leading-tight mb-0.5">${escapeHtml(b.title)}</h3>
+              ${c && c.subtitle ? `<p class="text-xs text-brand-500 dark:text-brand-400 font-semibold mb-1.5">${escapeHtml(c.subtitle)}</p>` : ''}
+              ${b.authors && b.authors.length ? `<p class="text-[11px] text-slate-400 mb-2">${b.authors.join(' · ')}</p>` : ''}
+              <p class="text-[12px] text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3">${escapeHtml((b.fullText||'').substring(0,120))}</p>
+              <div class="flex items-center gap-2 mt-2.5">
+                <button onclick="event.stopPropagation();toggleLikeBook('${b.id}')" class="text-rose-400 text-[10px] font-bold flex items-center gap-0.5 hover:text-rose-500 transition-colors ${b.likedBy && b.likedBy[window.currentUser.uid] ? 'text-rose-500' : ''}"><i data-lucide="heart" class="w-3 h-3 fill-current"></i> ${b.likes||0}</button>
+                <span class="text-slate-200 dark:text-slate-700">·</span>
+                <span class="text-[10px] text-slate-400">${b.authors?b.authors.length+'명 참여':''}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+      lucide.createIcons();
     }
 
     // CREATE BOOK & COVER
@@ -971,6 +1168,11 @@
 
     window.openCreateBookModal = function() {
       window.tempInvitedAuthors = [];
+      window.selectedCoverColor = coverColors[0];
+      window.selectedCoverShape = coverShapes[0];
+      window.selectedCoverPattern = 'none';
+      window.selectedCoverTextColor = '#ffffff';
+      window.showAllStamps = false;
       renderInviteTags();
       renderCoverCustomizerControls();
       updateCoverPreview();
@@ -993,9 +1195,13 @@
         status: authorType === 'INVITE' ? 'LOBBY' : 'WRITING', 
         authorType,
         cover: {
+          bgType: 'solid',
+          bgValue: window.selectedCoverColor,
           bgColor: window.selectedCoverColor,
           shapeEmoji: window.selectedCoverShape,
-          subtitle: subtitle
+          subtitle,
+          pattern: window.selectedCoverPattern,
+          textColor: window.selectedCoverTextColor,
         },
         timeLimitSec: rawTime >= 300 ? 0 : rawTime,
         maxWords: parseInt(document.getElementById('create-word-limit').value),
@@ -1194,20 +1400,49 @@
     };
 
     // READER
+    function updateLikeButton(book) {
+      const btn = document.getElementById('btn-like-book');
+      const countEl = document.getElementById('like-count-display');
+      if (!btn || !countEl) return;
+      const isLiked = !!(book && book.likedBy && book.likedBy[window.currentUser.uid]);
+      countEl.innerText = (book && book.likes) || 0;
+      btn.className = isLiked
+        ? 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-500 text-white transition-colors'
+        : 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-400 hover:bg-rose-100 transition-colors';
+    }
+
+    window.toggleLikeBook = function(bookId) {
+      const book = bookId ? window.allBooks[bookId] : window.readerCurrentBook;
+      if (!book) return;
+      const uid = window.currentUser.uid;
+      if (!uid) return showToast('로그인이 필요합니다.', true);
+      const isLiked = !!(book.likedBy && book.likedBy[uid]);
+      const updates = {};
+      updates[`books/${book.id}/likedBy/${uid}`] = isLiked ? null : true;
+      updates[`books/${book.id}/likes`] = Math.max(0, (book.likes || 0) + (isLiked ? -1 : 1));
+      update(ref(db), updates).catch(()=>{});
+    };
+
     window.openReaderModal = function(id) {
       const book = window.allBooks[id];
       if (!book) return;
+      window.readerCurrentBook = book;
       document.getElementById('reader-book-title').innerText = book.title;
       document.getElementById('reader-book-authors').innerText = `작가: ${book.authors ? book.authors.join(', ') : '작가진'}`;
+      updateLikeButton(book);
+      lucide.createIcons();
       
       const btnDelete = document.getElementById('btn-propose-delete');
       if (book.authorUids && book.authorUids.includes(window.currentUser.uid)) btnDelete.classList.remove('hidden');
       else btnDelete.classList.add('hidden');
 
-      const fullText = book.fullText || '';
+      const items = book.content || [];
+      const PAGE_SIZE = 8;
       window.readerBookPages = [];
-      for (let i = 0; i < fullText.length; i += 250) window.readerBookPages.push(fullText.substring(i, i + 250));
-      if (!window.readerBookPages.length) window.readerBookPages.push("내용이 없습니다.");
+      for (let i = 0; i < items.length; i += PAGE_SIZE) {
+        window.readerBookPages.push(items.slice(i, i + PAGE_SIZE));
+      }
+      if (!window.readerBookPages.length) window.readerBookPages.push([]);
       
       window.readerCurrentPageIndex = 0;
       renderReaderPage();
@@ -1224,21 +1459,49 @@
       }
     };
 
+    function renderReaderContentTo(el, pageIndex) {
+      const pageItems = window.readerBookPages[pageIndex] || [];
+      el.innerHTML = pageItems.length
+        ? pageItems.map(item =>
+            `<p class="font-serif text-slate-800 dark:text-slate-200 leading-[1.95] text-[14.5px] mb-4">${escapeHtml(item.text).replace(/\n/g, '<br>')}</p>`
+          ).join('')
+        : '<p class="text-slate-400 text-sm text-center py-8">내용이 없습니다.</p>';
+    }
+
     function renderReaderPage() {
-      window.readerCurrentBook = window.allBooks[Object.keys(window.allBooks).find(k => window.allBooks[k].title === document.getElementById('reader-book-title').innerText)];
-      document.getElementById('reader-page-box').innerHTML = `<p>${escapeHtml(window.readerBookPages[window.readerCurrentPageIndex])}</p>`;
+      renderReaderContentTo(document.getElementById('reader-page-box'), window.readerCurrentPageIndex);
       document.getElementById('reader-page-indicator').innerText = `${window.readerCurrentPageIndex + 1} / ${window.readerBookPages.length}`;
     }
-    window.prevBookPage = () => { if (window.readerCurrentPageIndex > 0) { window.readerCurrentPageIndex--; renderReaderPage(); } };
-    window.nextBookPage = () => { if (window.readerCurrentPageIndex < window.readerBookPages.length - 1) { window.readerCurrentPageIndex++; renderReaderPage(); } };
+    function flipToPage(newIndex) {
+      const box = document.getElementById('reader-page-box');
+      box.style.transition = 'opacity 0.12s ease-out';
+      box.style.opacity = '0';
+      setTimeout(() => {
+        window.readerCurrentPageIndex = newIndex;
+        renderReaderPage();
+        box.style.transition = 'opacity 0.15s ease-in';
+        box.style.opacity = '1';
+        setTimeout(() => { box.style.transition = ''; }, 150);
+      }, 120);
+    }
+    window.prevBookPage = () => { if (window.readerCurrentPageIndex > 0) flipToPage(window.readerCurrentPageIndex - 1); };
+    window.nextBookPage = () => { if (window.readerCurrentPageIndex < window.readerBookPages.length - 1) flipToPage(window.readerCurrentPageIndex + 1); };
 
     function setupReaderSwipeEvents() {
-      const area = document.getElementById('reader-swipe-area');
+      const area = document.getElementById('reader-page-area');
       if (!area) return;
-      area.addEventListener('touchstart', e => swipeStartX = e.touches[0].clientX, { passive: true });
+      let startX = 0, startY = 0;
+      area.addEventListener('touchstart', e => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
       area.addEventListener('touchend', e => {
-        const diffX = e.changedTouches[0].clientX - swipeStartX;
-        if (diffX > 50) prevBookPage(); else if (diffX < -50) nextBookPage();
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          if (dx < 0 && window.readerCurrentPageIndex < window.readerBookPages.length - 1) flipToPage(window.readerCurrentPageIndex + 1);
+          else if (dx > 0 && window.readerCurrentPageIndex > 0) flipToPage(window.readerCurrentPageIndex - 1);
+        }
       }, { passive: true });
     }
 
@@ -1254,36 +1517,152 @@
     };
     window.saveNickname = function() {
       const name = document.getElementById('input-nickname').value.trim();
-      if(name) { window.currentUser.name = name; updateUserUI(); toggleEditNickname(false); }
+      if(name) {
+        window.currentUser.name = name;
+        updateUserUI();
+        toggleEditNickname(false);
+        if(window.currentUser.uid) update(ref(db,`presence/${window.currentUser.uid}`),{name}).catch(()=>{});
+      }
     };
 
-    // AUTH
-    window.switchAuthTab = function(mode) {
-      window.authTabMode = mode;
-      document.getElementById('auth-tab-login').className = mode === 'login' ? "text-brand-600 border-b-2 border-brand-600 pb-1.5 transition-colors font-bold" : "text-slate-400 hover:text-slate-600 pb-1.5 transition-colors font-medium";
-      document.getElementById('auth-tab-signup').className = mode === 'signup' ? "text-brand-600 border-b-2 border-brand-600 pb-1.5 transition-colors font-bold" : "text-slate-400 hover:text-slate-600 pb-1.5 transition-colors font-medium";
-      document.getElementById('btn-auth-action').innerText = mode === 'login' ? "로그인" : "신규 회원가입";
+    // ===== EMOJI PICKER =====
+    const avatarEmojis = [
+      '😀','😃','😎','🤩','😊','🥰','😏','😴',
+      '🤠','👻','🤖','👽','🐱','🐶','🦊','🐼',
+      '🦁','🐯','🐸','🦄','🐉','🦸','👺','👾',
+      '🌟','⭐','🔥','💎','👑','🌈','🎭','💀',
+      '🍎','🎮','🎵','📚','🚀','⚡','🌊','🍀'
+    ];
+
+    window.openEmojiPicker = function() {
+      const current = window.currentUser.avatarChar;
+      document.getElementById('emoji-picker-grid').innerHTML = avatarEmojis.map(e =>
+        `<button onclick="selectAvatarEmoji('${e}')" class="w-10 h-10 rounded-xl text-2xl flex items-center justify-center transition-all ${current===e?'bg-brand-100 dark:bg-brand-900/40 ring-2 ring-brand-400 scale-110':'hover:bg-slate-100 dark:hover:bg-slate-800'}">${e}</button>`
+      ).join('');
+      document.getElementById('modal-emoji-picker').classList.remove('hidden');
+      lucide.createIcons();
     };
 
-    window.toggleEmailLoginModal = () => document.getElementById('modal-email-auth').classList.toggle('hidden');
-    window.submitAuthForm = function() {
-      const email = document.getElementById('auth-email').value.trim();
-      const pass = document.getElementById('auth-password').value.trim();
-      if (!email || !pass) return alert("이메일과 비밀번호를 입력해주세요.");
-      const req = window.authTabMode === 'login' ? signInWithEmailAndPassword(auth, email, pass) : createUserWithEmailAndPassword(auth, email, pass);
-      req.then(() => { toggleEmailLoginModal(); showToast(window.authTabMode === 'login' ? "로그인 성공!" : "회원가입 완료!"); }).catch(e => alert("실패: " + e.message));
+    window.selectAvatarEmoji = function(emoji) {
+      window.currentUser.avatarChar = emoji;
+      updateUserUI();
+      if(window.currentUser.uid) update(ref(db,`presence/${window.currentUser.uid}`),{avatarEmoji:emoji}).catch(()=>{});
+      closeModal('modal-emoji-picker');
     };
 
-    window.loginWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider()).then(() => showToast("Google 계정 로그인 완료!")).catch(e=>{});
-    
-    // LOGOUT & OPEN LOGIN MODAL IMMEDIATELY
-    window.handleLogout = () => {
-      signOut(auth).then(() => {
-        window.currentUser = { uid: null, name: '게스트', avatarChar: 'G', isAnon: true };
-        showToast("로그아웃 되었습니다.");
-        switchTab('home');
+    // ===== PRESENCE & SOCIAL =====
+    function initPresence() {
+      const uid = window.currentUser.uid;
+      if(!uid) return;
+      const presRef = ref(db,`presence/${uid}`);
+      set(presRef,{name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar||'😀',online:true,lastSeen:Date.now()}).catch(()=>{});
+      onDisconnect(presRef).update({online:false,lastSeen:Date.now()}).catch(()=>{});
+    }
+
+    function listenToSocial() {
+      const uid = window.currentUser.uid;
+      if(!uid) return;
+      onValue(ref(db,'presence'), snap=>{ window.socialData.presence=snap.val()||{}; renderSocialTab(); });
+      onValue(ref(db,`users/${uid}/friends`), snap=>{ window.socialData.friends=snap.val()||{}; renderSocialTab(); });
+      onValue(ref(db,`users/${uid}/friendRequests`), snap=>{ window.socialData.requests=snap.val()||{}; renderSocialTab(); });
+    }
+
+    window.switchSocialTab = function(filter) {
+      window.currentSocialFilter = filter;
+      ['all','friends','online'].forEach(f=>{
+        const btn=document.getElementById(`social-pill-${f}`);
+        if(!btn) return;
+        btn.className = f===filter
+          ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition-colors'
+          : 'px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition-colors';
       });
+      renderSocialTab();
     };
+
+    function renderSocialTab() {
+      const uid = window.currentUser.uid;
+      const {presence,friends,requests,sent} = window.socialData;
+      const reqSection = document.getElementById('social-requests-section');
+      const reqList = document.getElementById('social-requests-list');
+      const list = document.getElementById('social-users-list');
+      if(!list) return;
+
+      const pendingReqs = Object.entries(requests||{});
+      if(reqSection) reqSection.classList.toggle('hidden', pendingReqs.length===0);
+      if(reqList) reqList.innerHTML = pendingReqs.map(([fromUid,d])=>`
+        <div class="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-2xl border border-amber-200/60 dark:border-amber-900/50">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-2xl shrink-0">${escapeHtml(d.avatarEmoji||'😀')}</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-sm truncate">${escapeHtml(d.name)}</p>
+            <p class="text-[10px] text-slate-500">친구 요청을 보냈습니다</p>
+          </div>
+          <div class="flex gap-1.5 shrink-0">
+            <button onclick="declineFriendRequest('${fromUid}')" class="px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-bold">거절</button>
+            <button onclick="acceptFriendRequest('${fromUid}')" class="px-2 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-bold">수락</button>
+          </div>
+        </div>`).join('');
+
+      const allUsers = Object.entries(presence||{}).filter(([u])=>u!==uid);
+      let filtered = allUsers;
+      if(window.currentSocialFilter==='friends') filtered=allUsers.filter(([u])=>friends&&friends[u]);
+      else if(window.currentSocialFilter==='online') filtered=allUsers.filter(([,d])=>d.online);
+
+      if(!filtered.length) {
+        list.innerHTML = `<div class="puzzle-card p-8 text-center text-xs font-medium text-slate-400">${window.currentSocialFilter==='friends'?'아직 친구가 없습니다.':window.currentSocialFilter==='online'?'온라인 사용자가 없습니다.':'아직 아무도 없습니다.'}</div>`;
+        return;
+      }
+
+      const now = Date.now();
+      list.innerHTML = filtered.map(([u,d])=>{
+        const isFriend=!!(friends&&friends[u]);
+        const hasSent=sent.has(u);
+        const isOnline=d.online;
+        const isRecent=d.lastSeen&&(now-d.lastSeen<300000);
+        const dot=isOnline?'🟢':isRecent?'🟡':'⚫';
+        const status=isOnline?'온라인':isRecent?'방금 전':'오프라인';
+        const btn=isFriend
+          ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold">친구 ✓</span>`
+          : hasSent
+            ? `<span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 text-[10px] font-bold">요청됨</span>`
+            : `<button onclick="sendFriendRequest('${u}')" class="px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 text-brand-600 text-[10px] font-bold hover:bg-brand-100 transition-colors">+ 친구</button>`;
+        return `
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/80">
+            <div class="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-2xl shrink-0">${escapeHtml(d.avatarEmoji||'😀')}</div>
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-sm truncate text-slate-900 dark:text-white">${escapeHtml(d.name)}</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${dot} ${status}</p>
+            </div>
+            ${btn}
+          </div>`;
+      }).join('');
+    }
+
+    window.sendFriendRequest = function(toUid) {
+      const myUid = window.currentUser.uid;
+      if(!myUid) return showToast('로그인이 필요합니다.',true);
+      const toName = (window.socialData.presence[toUid]||{}).name||'사용자';
+      set(ref(db,`users/${toUid}/friendRequests/${myUid}`),{
+        name:window.currentUser.name, avatarEmoji:window.currentUser.avatarChar||'😀', timestamp:Date.now()
+      }).then(()=>{ window.socialData.sent.add(toUid); showToast(`${toName}님께 친구 요청을 보냈습니다.`); renderSocialTab(); });
+    };
+
+    window.acceptFriendRequest = function(fromUid) {
+      const myUid = window.currentUser.uid;
+      const d = window.socialData.requests[fromUid];
+      if(!myUid||!d) return;
+      const updates = {};
+      updates[`users/${myUid}/friends/${fromUid}`]={name:d.name,avatarEmoji:d.avatarEmoji};
+      updates[`users/${fromUid}/friends/${myUid}`]={name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar};
+      updates[`users/${myUid}/friendRequests/${fromUid}`]=null;
+      update(ref(db),updates).then(()=>showToast(`${d.name}님과 친구가 되었습니다! 🎉`));
+    };
+
+    window.declineFriendRequest = function(fromUid) {
+      const myUid = window.currentUser.uid;
+      if(!myUid) return;
+      remove(ref(db,`users/${myUid}/friendRequests/${fromUid}`)).then(()=>showToast('친구 요청을 거절했습니다.'));
+    };
+
 
     // UTILS
     window.switchTab = function(tabName) {
@@ -1304,7 +1683,10 @@
     };
     
     window.closeModal = id => document.getElementById(id).classList.add('hidden');
-    window.toggleDarkMode = () => document.documentElement.classList.toggle('dark');
+    window.toggleDarkMode = () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+    };
     function escapeHtml(str) { return (str||'').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
   </script>
 </body>
