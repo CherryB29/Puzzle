@@ -288,6 +288,15 @@
               </div>
             </div>
           </div>
+          <div class="flex items-center gap-2 pt-1">
+            <input type="file" id="avatar-file-input" accept="image/*" class="hidden" onchange="handleAvatarFileChange(event)" />
+            <button onclick="triggerAvatarUpload()" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i> 사진 업로드
+            </button>
+            <button onclick="removeAvatarPhoto()" class="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-xs font-bold text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors flex items-center gap-1.5">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 사진 제거
+            </button>
+          </div>
         </div>
 
         <div class="puzzle-card p-3 space-y-2">
@@ -583,7 +592,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, setPersistence, browserLocalPersistence, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, update, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC1ipALSkb85ap070GdZbvTLUjEDbnPEg0",
@@ -596,15 +606,15 @@
     const auth = getAuth(app);
     setPersistence(auth, browserLocalPersistence).catch(()=>{});
     const db = getDatabase(app);
+    const storage = getStorage(app);
 
-    window.currentUser = { uid: null, name: '게스트', avatarChar: 'P', isAnon: true };
+    window.currentUser = { uid: null, name: '게스트', avatarChar: 'P', avatarUrl: '', isAnon: true };
     window.allBooks = {};
     window.activeStudioBookId = null;
     window.studioTimerInterval = null;
     window.currentEditorFilter = 'ALL';
     window.lastPublishProposalTime = 0;
     window.tempInvitedAuthors = [];
-    const mockUsersForSearch = ['민수', '지은', '피클작가', '고양이', '별빛', '구름', '수진', '철수']; 
     let handledToasts = new Set();
     window.readerCurrentBook = null;
     window.readerBookPages = [];
@@ -612,6 +622,81 @@
     window.socialData = { presence: {}, friends: {}, requests: {}, sent: new Set() };
     window.currentSocialFilter = 'all';
     let swipeStartX = 0;
+
+    function escapeAttr(str) {
+      return (str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function renderAvatarMarkup(emoji, avatarUrl, sizeClass = 'w-10 h-10', fallbackClass = 'bg-slate-100 dark:bg-slate-700') {
+      if (avatarUrl) {
+        return `<img src="${escapeAttr(avatarUrl)}" alt="avatar" class="${sizeClass} rounded-xl object-cover shrink-0" />`;
+      }
+      return `<div class="${sizeClass} rounded-xl ${fallbackClass} flex items-center justify-center text-2xl shrink-0">${escapeHtml(emoji || '😀')}</div>`;
+    }
+
+    function renderAvatarElement(el, emoji, avatarUrl) {
+      if (!el) return;
+      if (avatarUrl) {
+        el.innerHTML = `<img src="${escapeAttr(avatarUrl)}" alt="avatar" class="w-full h-full rounded-xl object-cover" />`;
+      } else {
+        el.innerText = emoji || '😀';
+      }
+    }
+
+    function getNextOnlineTurnIndex(book, startIndex) {
+      const order = book?.turnOrder || [];
+      if (!order.length) return 0;
+      const presence = window.socialData?.presence || {};
+      if (!Object.keys(presence).length) return startIndex % order.length;
+
+      const normalizedStart = ((startIndex % order.length) + order.length) % order.length;
+      for (let step = 1; step <= order.length; step++) {
+        const idx = (normalizedStart + step) % order.length;
+        const uid = order[idx];
+        if (presence[uid] && presence[uid].online) return idx;
+      }
+      return normalizedStart;
+    }
+
+    function ensureCurrentTurnOnline(book) {
+      if (!book || book.status !== 'WRITING' || !book.turnOrder || !book.turnOrder.length) return;
+      const presence = window.socialData?.presence || {};
+      if (!Object.keys(presence).length) return;
+
+      const currentIndex = book.currentTurnIndex % book.turnOrder.length;
+      const currentUid = book.turnOrder[currentIndex];
+      if (presence[currentUid] && presence[currentUid].online) return;
+
+      const nextIndex = getNextOnlineTurnIndex(book, currentIndex);
+      if (nextIndex !== currentIndex) {
+        update(ref(db, `books/${book.id}`), { currentTurnIndex: nextIndex }).catch(()=>{});
+      }
+    }
+
+    async function loadUserProfile(uid) {
+      if (!uid) return;
+      try {
+        const snap = await get(ref(db, `users/${uid}/profile`));
+        const profile = snap.val() || {};
+        if (profile.name) window.currentUser.name = profile.name;
+        if (profile.avatarEmoji) window.currentUser.avatarChar = profile.avatarEmoji;
+        if (profile.avatarUrl) window.currentUser.avatarUrl = profile.avatarUrl;
+      } catch (_) {}
+    }
+
+    function syncUserProfileToServer() {
+      const uid = window.currentUser.uid;
+      if (!uid) return;
+      update(ref(db, `users/${uid}/profile`), {
+        name: window.currentUser.name,
+        avatarEmoji: window.currentUser.avatarChar || '😀',
+        avatarUrl: window.currentUser.avatarUrl || null,
+      }).catch(()=>{});
+    }
 
     // Cover customizer state
     const coverColors = [
@@ -838,10 +923,13 @@
                window.currentUser.avatarChar = 'G';
             }
           }
-          updateUserUI();
-          renderAllViews();
-          initPresence();
-          listenToSocial();
+          loadUserProfile(user.uid).finally(() => {
+            updateUserUI();
+            renderAllViews();
+            syncUserProfileToServer();
+            initPresence();
+            listenToSocial();
+          });
         } else {
           document.getElementById('view-auth').classList.remove('hidden');
           document.getElementById('view-auth').classList.add('flex');
@@ -887,7 +975,7 @@
 
     window.handleLogout = () => {
       signOut(auth).then(() => {
-        window.currentUser = { uid: null, name: '게스트', avatarChar: 'G', isAnon: true };
+        window.currentUser = { uid: null, name: '게스트', avatarChar: 'G', avatarUrl: '', isAnon: true };
         showToast("로그아웃 되었습니다.");
         switchTab('home');
       });
@@ -896,15 +984,16 @@
     function updateUserUI() {
       const name = window.currentUser.name;
       const avatar = window.currentUser.avatarChar || name.charAt(0) || '😀';
+      const avatarUrl = window.currentUser.avatarUrl || '';
       
       document.getElementById('header-user-name').innerText = name;
-      document.getElementById('header-user-avatar').innerText = avatar;
+      renderAvatarElement(document.getElementById('header-user-avatar'), avatar, avatarUrl);
       document.getElementById('home-greeting-name').innerText = name;
       
       document.getElementById('display-nickname').innerText = name;
       document.getElementById('input-nickname').value = name;
       const emojiBtn = document.getElementById('avatar-emoji-btn');
-      if (emojiBtn) emojiBtn.innerText = avatar;
+      if (emojiBtn) renderAvatarElement(emojiBtn, avatar, avatarUrl);
       
       const statusBadge = document.getElementById('account-status-badge');
       const emailText = document.getElementById('profile-email-text');
@@ -1131,11 +1220,29 @@
       const dropdown = document.getElementById('invite-search-dropdown');
       query = query.trim();
       if (!query) { dropdown.classList.add('hidden'); return; }
-      const results = mockUsersForSearch.filter(u => u.includes(query) && !window.tempInvitedAuthors.includes(u));
+
+      const q = query.toLowerCase();
+      const myUid = window.currentUser.uid;
+      const now = Date.now();
+      const results = Object.entries(window.socialData.presence || {})
+        .filter(([uid, d]) => uid !== myUid && d && d.name)
+        .map(([uid, d]) => ({
+          uid,
+          name: String(d.name),
+          online: !!d.online,
+          isRecent: !!d.lastSeen && (now - d.lastSeen < 300000),
+        }))
+        .filter(u => u.name.toLowerCase().includes(q) && !window.tempInvitedAuthors.includes(u.name))
+        .sort((a, b) => Number(b.online) - Number(a.online) || Number(b.isRecent) - Number(a.isRecent) || a.name.localeCompare(b.name, 'ko'));
+
       if (results.length > 0) {
-        dropdown.innerHTML = results.map(u => `<div onclick="selectInviteAuthor('${u}')" class="px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0">${u}</div>`).join('');
+        dropdown.innerHTML = results.map(u => {
+          const dot = u.online ? '🟢' : (u.isRecent ? '🟡' : '⚫');
+          const status = u.online ? '온라인' : (u.isRecent ? '방금 전' : '오프라인');
+          return `<div onclick="selectInviteAuthor('${escapeAttr(u.name)}')" class="px-3 py-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0 flex items-center justify-between gap-2"><span class="truncate">${escapeHtml(u.name)}</span><span class="text-[10px] text-slate-400 shrink-0">${dot} ${status}</span></div>`;
+        }).join('');
       } else {
-        dropdown.innerHTML = `<div class="px-3 py-2 text-[10px] text-slate-400">결과 없음 (엔터로 추가)</div>`;
+        dropdown.innerHTML = `<div class="px-3 py-2 text-[10px] text-slate-400">결과 없음 (소셜 사용자 기준)</div>`;
       }
       dropdown.classList.remove('hidden');
     };
@@ -1271,6 +1378,8 @@
     }
 
     function renderStudioContent(book) {
+      ensureCurrentTurnOnline(book);
+
       const lobbyView = document.getElementById('studio-lobby-view');
       const forceBtn = document.getElementById('btn-force-start');
       if (book.status === 'LOBBY') {
@@ -1339,8 +1448,11 @@
         document.getElementById('studio-timer-display').innerText = `${Math.floor(t/60).toString().padStart(2,'0')}:${(t%60).toString().padStart(2,'0')}`;
         if (t <= 0) {
           clearInterval(window.studioTimerInterval);
-          book.currentTurnIndex = (book.currentTurnIndex + 1) % book.turnOrder.length;
-          update(ref(db, `books/${book.id}`), { currentTurnIndex: book.currentTurnIndex });
+          const nextIndex = getNextOnlineTurnIndex(book, book.currentTurnIndex);
+          if (nextIndex !== book.currentTurnIndex) {
+            book.currentTurnIndex = nextIndex;
+            update(ref(db, `books/${book.id}`), { currentTurnIndex: book.currentTurnIndex });
+          }
         }
       }, 1000);
     }
@@ -1355,7 +1467,7 @@
 
       if (!book.content) book.content = [];
       book.content.push({ authorName: window.currentUser.name, text, timestamp: Date.now() });
-      book.currentTurnIndex = (book.currentTurnIndex + 1) % (book.turnOrder?.length || 1);
+      book.currentTurnIndex = getNextOnlineTurnIndex(book, book.currentTurnIndex);
       input.value = '';
       set(ref(db, `books/${book.id}`), book);
     };
@@ -1521,7 +1633,10 @@
         window.currentUser.name = name;
         updateUserUI();
         toggleEditNickname(false);
-        if(window.currentUser.uid) update(ref(db,`presence/${window.currentUser.uid}`),{name}).catch(()=>{});
+        if(window.currentUser.uid) {
+          update(ref(db,`presence/${window.currentUser.uid}`),{name}).catch(()=>{});
+          syncUserProfileToServer();
+        }
       }
     };
 
@@ -1546,8 +1661,78 @@
     window.selectAvatarEmoji = function(emoji) {
       window.currentUser.avatarChar = emoji;
       updateUserUI();
-      if(window.currentUser.uid) update(ref(db,`presence/${window.currentUser.uid}`),{avatarEmoji:emoji}).catch(()=>{});
+      if(window.currentUser.uid) {
+        update(ref(db,`presence/${window.currentUser.uid}`),{avatarEmoji:emoji,avatarUrl:window.currentUser.avatarUrl||null}).catch(()=>{});
+        syncUserProfileToServer();
+      }
       closeModal('modal-emoji-picker');
+    };
+
+    window.triggerAvatarUpload = function() {
+      if (!window.currentUser.uid) {
+        showToast('로그인이 필요합니다.', true);
+        return;
+      }
+      document.getElementById('avatar-file-input')?.click();
+    };
+
+    window.handleAvatarFileChange = async function(event) {
+      const input = event.target;
+      const file = input?.files?.[0];
+      if (!file) return;
+      if (!window.currentUser.uid) {
+        showToast('로그인이 필요합니다.', true);
+        input.value = '';
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        showToast('이미지 파일만 업로드할 수 있습니다.', true);
+        input.value = '';
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('프로필 사진은 2MB 이하만 가능합니다.', true);
+        input.value = '';
+        return;
+      }
+
+      try {
+        const uid = window.currentUser.uid;
+        const path = `avatars/${uid}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const fileRef = storageRef(storage, path);
+        await uploadBytes(fileRef, file, { contentType: file.type });
+        const url = await getDownloadURL(fileRef);
+
+        window.currentUser.avatarUrl = url;
+        updateUserUI();
+
+        const updates = {};
+        updates[`users/${uid}/profile/name`] = window.currentUser.name;
+        updates[`users/${uid}/profile/avatarEmoji`] = window.currentUser.avatarChar || '😀';
+        updates[`users/${uid}/profile/avatarUrl`] = url;
+        updates[`presence/${uid}/name`] = window.currentUser.name;
+        updates[`presence/${uid}/avatarEmoji`] = window.currentUser.avatarChar || '😀';
+        updates[`presence/${uid}/avatarUrl`] = url;
+        update(ref(db), updates).catch(()=>{});
+
+        showToast('프로필 사진이 저장되었습니다.');
+      } catch (_) {
+        showToast('프로필 사진 업로드에 실패했습니다.', true);
+      } finally {
+        input.value = '';
+      }
+    };
+
+    window.removeAvatarPhoto = function() {
+      const uid = window.currentUser.uid;
+      if (!uid) return showToast('로그인이 필요합니다.', true);
+      window.currentUser.avatarUrl = '';
+      updateUserUI();
+      const updates = {};
+      updates[`users/${uid}/profile/avatarUrl`] = null;
+      updates[`presence/${uid}/avatarUrl`] = null;
+      update(ref(db), updates).catch(()=>{});
+      showToast('프로필 사진을 제거했습니다.');
     };
 
     // ===== PRESENCE & SOCIAL =====
@@ -1555,14 +1740,21 @@
       const uid = window.currentUser.uid;
       if(!uid) return;
       const presRef = ref(db,`presence/${uid}`);
-      set(presRef,{name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar||'😀',online:true,lastSeen:Date.now()}).catch(()=>{});
+      set(presRef,{name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar||'😀',avatarUrl:window.currentUser.avatarUrl||null,online:true,lastSeen:Date.now()}).catch(()=>{});
       onDisconnect(presRef).update({online:false,lastSeen:Date.now()}).catch(()=>{});
     }
 
     function listenToSocial() {
       const uid = window.currentUser.uid;
       if(!uid) return;
-      onValue(ref(db,'presence'), snap=>{ window.socialData.presence=snap.val()||{}; renderSocialTab(); });
+      onValue(ref(db,'presence'), snap=>{
+        window.socialData.presence=snap.val()||{};
+        renderSocialTab();
+        if (window.activeStudioBookId) {
+          const activeBook = window.allBooks[window.activeStudioBookId];
+          if (activeBook) ensureCurrentTurnOnline(activeBook);
+        }
+      });
       onValue(ref(db,`users/${uid}/friends`), snap=>{ window.socialData.friends=snap.val()||{}; renderSocialTab(); });
       onValue(ref(db,`users/${uid}/friendRequests`), snap=>{ window.socialData.requests=snap.val()||{}; renderSocialTab(); });
     }
@@ -1591,7 +1783,7 @@
       if(reqSection) reqSection.classList.toggle('hidden', pendingReqs.length===0);
       if(reqList) reqList.innerHTML = pendingReqs.map(([fromUid,d])=>`
         <div class="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-2xl border border-amber-200/60 dark:border-amber-900/50">
-          <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-2xl shrink-0">${escapeHtml(d.avatarEmoji||'😀')}</div>
+          ${renderAvatarMarkup(d.avatarEmoji || '😀', d.avatarUrl || '', 'w-10 h-10', 'bg-amber-100 dark:bg-amber-900/40')}
           <div class="flex-1 min-w-0">
             <p class="font-bold text-sm truncate">${escapeHtml(d.name)}</p>
             <p class="text-[10px] text-slate-500">친구 요청을 보냈습니다</p>
@@ -1627,7 +1819,7 @@
             : `<button onclick="sendFriendRequest('${u}')" class="px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 text-brand-600 text-[10px] font-bold hover:bg-brand-100 transition-colors">+ 친구</button>`;
         return `
           <div class="flex items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/80">
-            <div class="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-2xl shrink-0">${escapeHtml(d.avatarEmoji||'😀')}</div>
+            ${renderAvatarMarkup(d.avatarEmoji || '😀', d.avatarUrl || '', 'w-11 h-11')}
             <div class="flex-1 min-w-0">
               <p class="font-bold text-sm truncate text-slate-900 dark:text-white">${escapeHtml(d.name)}</p>
               <p class="text-[10px] text-slate-400 mt-0.5">${dot} ${status}</p>
@@ -1642,7 +1834,7 @@
       if(!myUid) return showToast('로그인이 필요합니다.',true);
       const toName = (window.socialData.presence[toUid]||{}).name||'사용자';
       set(ref(db,`users/${toUid}/friendRequests/${myUid}`),{
-        name:window.currentUser.name, avatarEmoji:window.currentUser.avatarChar||'😀', timestamp:Date.now()
+        name:window.currentUser.name, avatarEmoji:window.currentUser.avatarChar||'😀', avatarUrl:window.currentUser.avatarUrl||null, timestamp:Date.now()
       }).then(()=>{ window.socialData.sent.add(toUid); showToast(`${toName}님께 친구 요청을 보냈습니다.`); renderSocialTab(); });
     };
 
@@ -1651,8 +1843,8 @@
       const d = window.socialData.requests[fromUid];
       if(!myUid||!d) return;
       const updates = {};
-      updates[`users/${myUid}/friends/${fromUid}`]={name:d.name,avatarEmoji:d.avatarEmoji};
-      updates[`users/${fromUid}/friends/${myUid}`]={name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar};
+      updates[`users/${myUid}/friends/${fromUid}`]={name:d.name,avatarEmoji:d.avatarEmoji,avatarUrl:d.avatarUrl||null};
+      updates[`users/${fromUid}/friends/${myUid}`]={name:window.currentUser.name,avatarEmoji:window.currentUser.avatarChar,avatarUrl:window.currentUser.avatarUrl||null};
       updates[`users/${myUid}/friendRequests/${fromUid}`]=null;
       update(ref(db),updates).then(()=>showToast(`${d.name}님과 친구가 되었습니다! 🎉`));
     };
